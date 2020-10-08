@@ -112,6 +112,4 @@ app.get("/", (req, res) => {
   res.send("Welcome to Volunteer Network Server!");
 });
 
-app.listen(port, () => {
-  console.log(`Listening at http://localhost:${port}`);
-});
+app.listen(process.env.PORT || port);
