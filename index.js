@@ -8,7 +8,7 @@ const db_Pass = process.env.DB_PASS;
 const fireDB_URL = process.env.FIREDB_URL;
 
 const admin = require("firebase-admin");
-const serviceAccount = require("./configs/volunteer-network-98347-firebase-adminsdk-atr4a-9cec7aada1.json");
+const serviceAccount = require("./volunteer-network-98347-firebase-adminsdk-atr4a-9cec7aada1-copy.json");
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
   databaseURL: fireDB_URL,
