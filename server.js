@@ -1,8 +1,18 @@
 const express = require("express");
 const bodyParser = require("body-parser");
 const cors = require("cors");
+require("dotenv").config();
 const port = 4000;
-const pass = "LB6MXrkzNUK0wmqt";
+const db_User = process.env.DB_USER;
+const db_Pass = process.env.DB_PASS;
+const fireDB_URL = process.env.FireDB_URL;
+
+const admin = require("firebase-admin");
+const serviceAccount = require("./configs/volunteer-network-98347-firebase-adminsdk-atr4a-9cec7aada1.json");
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+  databaseURL: fireDB_URL,
+});
 
 const app = express();
 app.use(bodyParser.json());
@@ -12,12 +22,12 @@ app.use(cors());
 const MongoClient = require("mongodb").MongoClient;
 const ObjectID = require("mongodb").ObjectID;
 
-const uri =
-  "mongodb+srv://kamrana610:LB6MXrkzNUK0wmqt@cluster0.lkrgo.mongodb.net/volunteerNetwork?retryWrites=true&w=majority";
+const uri = `mongodb+srv://${db_User}:${db_Pass}@cluster0.lkrgo.mongodb.net/volunteerNetwork?retryWrites=true&w=majority`;
 const client = new MongoClient(uri, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 });
+
 client.connect((err) => {
   const registerCollection = client
     .db("volunteerNetwork")
@@ -29,16 +39,42 @@ client.connect((err) => {
     registerCollection.insertOne(newRegistration).then((result) => {
       res.send(result.insertedCount > 0);
     });
-    console.log(newRegistration);
   });
 
   //Get Data from database
   app.get("/myEvents", (req, res) => {
-    registerCollection
-      .find({ email: req.query.email })
-      .toArray((err, results) => {
-        res.send(results);
-      });
+    const bearer = req.headers.authorization;
+    if (bearer && bearer.startsWith("Bearer ")) {
+      const idToken = bearer.split(" ")[1];
+      admin
+        .auth()
+        .verifyIdToken(idToken)
+        .then(function (decodedToken) {
+          const tokenEmail = decodedToken.email;
+          const queryEmail = req.query.email;
+          if (tokenEmail == queryEmail) {
+            registerCollection
+              .find({ email: queryEmail })
+              .toArray((err, results) => {
+                res.send(results);
+              });
+          } else {
+            res.status(401).send("Un-Authorized Access");
+          }
+        })
+        .catch(function (error) {
+          //Handle errors
+        });
+    } else {
+      res.status(401).send("Un-Authorized Access");
+    }
+  });
+
+  //Get All User for Admin
+  app.get("/allUser", (req, res) => {
+    registerCollection.find({}).toArray((err, documents) => {
+      res.send(documents);
+    });
   });
 
   //Delete Data from database
@@ -53,9 +89,27 @@ client.connect((err) => {
   });
 });
 
+//Connect to Events Collection...
+client.connect((err) => {
+  const eventsCollection = client.db("volunteerNetwork").collection("events");
+  //Sent new evenetData to Database
+  app.post("/createEvent", (req, res) => {
+    const newEvent = req.body;
+    eventsCollection.insertOne(newEvent).then((result) => {
+      res.send(result.insertedCount > 0);
+    });
+
+    app.get("/createdEvent", (req, res) => {
+      eventsCollection.find({}).toArray((err, documents) => {
+        res.send(documents);
+      });
+    });
+  });
+});
+
 //Connetion Check
 app.get("/", (req, res) => {
-  res.send("Hello World!");
+  res.send("Welcome to Volunteer Network Server!");
 });
 
 app.listen(port, () => {
