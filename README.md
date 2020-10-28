@@ -26,3 +26,4 @@
    - cors 2.8.5
    - body-parser 1.191
    - firebase-admin 9.2.0
+   - nodemon 2.0.4
