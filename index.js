@@ -2,6 +2,7 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const cors = require("cors");
 require("dotenv").config();
+const fileUpload = require("express-fileupload");
 const port = 4000;
 const db_User = process.env.DB_USER;
 const db_Pass = process.env.DB_PASS;
@@ -18,6 +19,7 @@ const app = express();
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cors());
+app.use(fileUpload());
 
 const MongoClient = require("mongodb").MongoClient;
 const ObjectID = require("mongodb").ObjectID;
@@ -94,8 +96,20 @@ client.connect((err) => {
   const eventsCollection = client.db("volunteerNetwork").collection("events");
   //Sent new evenetData to Database
   app.post("/createEvent", (req, res) => {
-    const newEvent = req.body;
-    eventsCollection.insertOne(newEvent).then((result) => {
+    const file = req.files.file;
+    const name = req.body.name;
+    const description = req.body.description;
+
+    //encodeing Image
+    const newImg = file.data;
+    const encImg = newImg.toString("base64");
+    var image = {
+      contentType: req.files.file.mimetype,
+      size: req.files.file.size,
+      img: Buffer.from(encImg, "base64"),
+    };
+
+    eventsCollection.insertOne({ name, description, image }).then((result) => {
       res.send(result.insertedCount > 0);
     });
 
